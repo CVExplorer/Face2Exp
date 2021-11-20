@@ -26,7 +26,6 @@ from models import ModelEMA
 from utils import (AverageMeter, accuracy, create_loss_fn,
                    save_checkpoint, reduce_tensor, model_load_state_dict)
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 time_stamp = str(int(time.time()))
 
 logger = logging.getLogger(__name__)
@@ -125,75 +124,6 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
     if not os.path.exists(record_file):
         os.makedirs(record_file)
 
-    loss_file = f'{record_file}/loss_{time_stamp}.txt'
-    acc_file = f'{record_file}/acc_{time_stamp}.txt'
-    teacher_lossfile = f'{record_file}/teacher_loss_{time_stamp}.txt'
-    teacher_accfile = f'{record_file}/teacher_acc_{time_stamp}.txt'
-    t_loss_uda_file = f'{record_file}/t_loss_uda_{time_stamp}.txt'
-    dot_product_file = f'{record_file}/dot_product_{time_stamp}.txt'
-    t_loss_mpl_file = f'{record_file}/t_loss_mpl_{time_stamp}.txt'
-    pseudo_label_file = f'{record_file}/pseudo_label_{time_stamp}.txt'
-    lr_file = f'{record_file}/lr_{time_stamp}.txt'
-    t_loss_l_file = f'{record_file}/t_loss_l_{time_stamp}.txt'
-    s_acc_file = f'{record_file}/s_acc_{time_stamp}.txt'
-    mask_file = f'{record_file}/mask_{time_stamp}.txt'
-    t_train_lossfile = f'{record_file}/t_train_loss_{time_stamp}.txt'
-    s_train_lossfile = f'{record_file}/s_train_loss_{time_stamp}.txt'
-    s_distribute_file = f'{record_file}/s_distribute_{time_stamp}.txt'
-    s_new = f'{record_file}/s_new_{time_stamp}.txt'
-    s_old = f'{record_file}/s_old_{time_stamp}.txt'
-
-    with open(loss_file, 'w') as file_obj:
-        file_obj.write('\r\n')
-
-    with open(acc_file, 'w') as file_obj:
-        file_obj.write('\r\n')
-
-    with open(teacher_lossfile, 'w') as f:
-        f.write('\r\n')
-
-    with open(teacher_accfile, 'w') as f:
-        f.write('\r\n')
-
-    with open(t_loss_uda_file, 'w') as f:
-        f.write('\r\n')
-
-    with open(dot_product_file, 'w') as f:
-        f.write('\r\n')
-
-    with open(t_loss_mpl_file, 'w') as f:
-        f.write('\r\n')
-
-    with open(pseudo_label_file, 'w') as f:
-        f.write('\r\n')
-
-    with open(t_loss_l_file, 'w') as f:
-        f.write('\r\n')
-
-    with open(lr_file, 'w') as f:
-        f.write('\r\n')
-
-    with open(s_acc_file, 'w') as f:
-        f.write('\r\n')
-
-    with open(mask_file, 'w') as f:
-        f.write('\r\n')
-
-    with open(t_train_lossfile, 'w') as f:
-        f.write('\r\n')
-
-    with open(s_train_lossfile, 'w') as f:
-        f.write('\r\n')
-
-    with open(s_distribute_file, 'w') as f:
-        f.write('\r\n')
-
-    with open(s_new, 'w') as f:
-        f.write('\r\n')
-
-    with open(s_old, 'w') as f:
-        f.write('\r\n')
-
     if args.world_size > 1:
         labeled_epoch = 0
         unlabeled_epoch = 0
@@ -264,27 +194,13 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
             # 此处是预测两种augmentation的图像的类别
             _, pr_w = torch.max(t_logits_uw, dim=-1)
             _, pr_s = torch.max(t_logits_us, dim=-1)
-            #             print(pr_w.shape,pr_s.shape,targets.shape)
 
             acc_w = (pr_w.eq(unlabeled_targets.data).cpu().sum()) / batch_size
             acc_s = (pr_s.eq(unlabeled_targets.data).cpu().sum()) / batch_size
-            with open(s_distribute_file, 'a') as f:
-                f.write(str(t_logits_uw) + "," + str(t_logits_us) + '\r\n')
-                f.write(str(pr_w) + "," + str(pr_s) + "," + str(unlabeled_targets) + '\r\n')
-                f.write(str(acc_w) + "," + str(acc_s))
-                f.write('\r\n')
+
             soft_pseudo_label = torch.softmax(t_logits_uw.detach() / args.temperature, dim=-1)
             max_probs, hard_pseudo_label = torch.max(soft_pseudo_label, dim=-1)
-            with open(pseudo_label_file, 'a') as f:
-                f.write(f'In a batch of step {step}\n')
-                f.write('Hard_pseudo_label:')
-                for l in hard_pseudo_label:
-                    f.write(str(int(l)) + " ")
-                f.write('\r\n')
-                f.write('Groundtruth label:')
-                for l in unlabeled_targets:
-                    f.write(str(int(l)) + " ")
-                f.write('\r\n')
+
             mask = max_probs.ge(args.threshold).float()
             t_loss_u_no_mask = torch.mean(
                 -(soft_pseudo_label * torch.log_softmax(t_logits_us, dim=-1)).sum(dim=-1)
@@ -294,10 +210,6 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
             )
             weight_u = args.lambda_u * min(1., (step + 1) / args.uda_steps)
             t_loss_uda = t_loss_l + weight_u * t_loss_u_no_mask
-
-            with open(t_loss_uda_file, 'a') as f:
-                f.write(str(t_loss_uda) + "," + str(t_loss_l) + "," + str(t_loss_u) + "," + str(t_loss_u_no_mask))
-                f.write('\r\n')
 
             s_images = torch.cat((images_l, images_us))
             s_logits = student_model(s_images)
@@ -325,23 +237,12 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
             #             dot_product = s_loss_l_new - s_loss_l_old
             # test
             dot_product = s_loss_l_old - s_loss_l_new
-            with open(s_old, 'a') as f:
-                f.write(str(s_loss_l_old))
-                f.write('\r\n')
-            with open(s_new, 'a') as f:
-                f.write(str(s_loss_l_new))
-                f.write('\r\n')
-            with open(dot_product_file, 'a') as f:
-                f.write(str(dot_product))
-                f.write('\r\n')
+
             #             moving_dot_product = moving_dot_product * 0.99 + dot_product * 0.01
             #             dot_product = dot_product - moving_dot_product
             _, hard_pseudo_label = torch.max(t_logits_us.detach(), dim=-1)
             t_loss_mpl = dot_product * F.cross_entropy(t_logits_us, hard_pseudo_label)
 
-            with open(t_loss_mpl_file, 'a') as f:
-                f.write(str(t_loss_mpl))
-                f.write('\r\n')
             # 此处teacher的loss function为：有监督的loss，无监督的loss，反馈机制的loss
             t_loss = t_loss_uda + t_loss_mpl
 
@@ -372,18 +273,7 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
         mean_mask.update(mask.mean().item())
 
         batch_time.update(time.time() - end)
-        with open(lr_file, 'a') as f:
-            f.write(str(get_lr(s_optimizer)))
-            f.write('\r\n')
-        with open(t_train_lossfile, 'a') as f:
-            f.write(str(t_losses.avg))
-            f.write('\r\n')
-        with open(s_train_lossfile, 'a') as f:
-            f.write(str(s_losses.avg))
-            f.write('\r\n')
-        with open(mask_file, 'a') as f:
-            f.write(str(mean_mask.avg))
-            f.write('\r\n')
+
         pbar.set_description(
             f"Train Iter: {step + 1:3}/{args.total_steps:3}. "
             f"LR: {get_lr(s_optimizer):.4f}. Data: {data_time.avg:.2f}s. "
@@ -407,18 +297,6 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
                 test_model = avg_student_model if avg_student_model is not None else student_model
                 test_loss, top1, top2 = evaluate(args, test_loader, test_model, criterion)
                 teacher_loss, t_top1, t_top2 = evaluate(args, test_loader, teacher_model, criterion)
-                with open(loss_file, 'a') as file_obj:
-                    file_obj.write(str(test_loss))
-                    file_obj.write('\r\n')
-                with open(acc_file, 'a') as file_obj:
-                    file_obj.write(str(top1))
-                    file_obj.write('\r\n')
-                with open(teacher_lossfile, 'a') as f:
-                    f.write(str(teacher_loss))
-                    f.write('\r\n')
-                with open(teacher_accfile, 'a') as f:
-                    f.write(str(t_top1))
-                    f.write('\r\n')
 
                 args.writer.add_scalar("test/loss", test_loss, args.num_eval)
                 args.writer.add_scalar("test/acc@1", top1, args.num_eval)
@@ -478,7 +356,7 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
         model_load_state_dict(student_model, checkpoint['avg_state_dict'])
     else:
         model_load_state_dict(student_model, checkpoint['student_state_dict'])
-    finetune(args, labeled_loader, test_loader, student_model, criterion, loss_file, acc_file)
+    finetune(args, labeled_loader, test_loader, student_model, criterion)
     return
 
 
@@ -516,13 +394,7 @@ def evaluate(args, test_loader, model, criterion):
         return losses.avg, top1.avg, top2.avg
 
 
-def finetune(args, train_loader, test_loader, model, criterion, loss_file, acc_file):
-    with open(loss_file, 'a') as file_obj:
-        file_obj.write('Finetune')
-        file_obj.write('\r\n')
-    with open(acc_file, 'a') as file_obj:
-        file_obj.write('Finetune')
-        file_obj.write('\r\n')
+def finetune(args, train_loader, test_loader, model, criterion):
     train_sampler = RandomSampler if args.local_rank == -1 else DistributedSampler
     labeled_loader = DataLoader(
         train_loader.dataset,
@@ -575,12 +447,6 @@ def finetune(args, train_loader, test_loader, model, criterion, loss_file, acc_f
         if args.local_rank in [-1, 0]:
             args.writer.add_scalar("finetune/train_loss", losses.avg, epoch)
             test_loss, top1, top2 = evaluate(args, test_loader, model, criterion)
-            with open(loss_file, 'a') as file_obj:
-                file_obj.write(str(test_loss))
-                file_obj.write('\r\n')
-            with open(acc_file, 'a') as file_obj:
-                file_obj.write(str(top1))
-                file_obj.write('\r\n')
             args.writer.add_scalar("finetune/test_loss", test_loss, epoch)
             args.writer.add_scalar("finetune/acc@1", top1, epoch)
             args.writer.add_scalar("finetune/acc@2", top2, epoch)

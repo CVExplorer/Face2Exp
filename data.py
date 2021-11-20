@@ -9,7 +9,7 @@ from torchvision import datasets
 from torchvision import transforms
 import torch.utils.data as data
 
-from augmentation2 import RandAugment, RandAugment_n
+from augmentation import RandAugment
 from PIL import Image
 import random
 import copy
