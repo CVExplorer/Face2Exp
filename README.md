@@ -6,6 +6,7 @@ Here we apply part of AffectNet as labeled FER data, which contains 25,165 image
 ## Command
 The training command is:
 > python main.py --seed 5 --name try --num-classes 7 --total-steps 180000 --eval-step 100 --randaug 2 16 --batch-size 32 --teacher_lr 1e-3 --student_lr 1e-3 --teacher-dropout 0 --student-dropout 0 --amp --resize 224 --world-size 2 --workers 16
+
 For test program, just run the test.ipynb file after modifying the model path.
 
 The best model could be obtained from [Google Drive](https://drive.google.com/file/d/116e1WILkG4RKjwol5OyczaROYsKja9CP/view?usp=sharing)
