@@ -34,10 +34,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--name', type=str, required=True, help='experiment name')
 parser.add_argument('--data-path', default='./data', type=str, help='data path')
 parser.add_argument('--save-path', default='./model', type=str, help='save path')
-parser.add_argument('--dataset', default='fer', type=str,
-                    choices=['cifar10', 'cifar100', 'fer'], help='dataset name')
-parser.add_argument('--num-labeled', type=int, default=4000, help='number of labeled data')
-parser.add_argument("--expand-labels", action="store_true", help="expand labels to fit eval steps")
 parser.add_argument('--total-steps', default=30000, type=int, help='number of total steps to run')
 parser.add_argument('--eval-step', default=100, type=int, help='number of eval steps to run')
 parser.add_argument('--start-step', default=0, type=int,
