@@ -26,6 +26,7 @@ from models import ModelEMA
 from utils import (AverageMeter, accuracy, create_loss_fn,
                    save_checkpoint, reduce_tensor, model_load_state_dict)
 
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 time_stamp = str(int(time.time()))
 
 logger = logging.getLogger(__name__)
@@ -115,7 +116,7 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
     logger.info(f"   Task = Experiment basic")
     logger.info(f"   Total steps = {args.total_steps}")
 
-    record_file = f'experiment_basic_{time_stamp}/'
+    record_file = f'experiment_{args.name}_{time_stamp}/'
     args.save_path = record_file
     if not os.path.exists(record_file):
         os.makedirs(record_file)
@@ -187,13 +188,6 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
             targets = torch.tensor(targets, dtype=torch.int64)
             t_loss_l = criterion(t_logits_l, targets)
 
-            # 此处是预测两种augmentation的图像的类别
-            _, pr_w = torch.max(t_logits_uw, dim=-1)
-            _, pr_s = torch.max(t_logits_us, dim=-1)
-
-            acc_w = (pr_w.eq(unlabeled_targets.data).cpu().sum()) / batch_size
-            acc_s = (pr_s.eq(unlabeled_targets.data).cpu().sum()) / batch_size
-
             soft_pseudo_label = torch.softmax(t_logits_uw.detach() / args.temperature, dim=-1)
             max_probs, hard_pseudo_label = torch.max(soft_pseudo_label, dim=-1)
 
@@ -233,13 +227,11 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
             #             dot_product = s_loss_l_new - s_loss_l_old
             # test
             dot_product = s_loss_l_old - s_loss_l_new
-
             #             moving_dot_product = moving_dot_product * 0.99 + dot_product * 0.01
             #             dot_product = dot_product - moving_dot_product
             _, hard_pseudo_label = torch.max(t_logits_us.detach(), dim=-1)
             t_loss_mpl = dot_product * F.cross_entropy(t_logits_us, hard_pseudo_label)
 
-            # 此处teacher的loss function为：有监督的loss，无监督的loss，反馈机制的loss
             t_loss = t_loss_uda + t_loss_mpl
 
         t_scaler.scale(t_loss).backward()
@@ -322,7 +314,7 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
                     'student_scaler': s_scaler.state_dict(),
                 }, is_best)
 
-                if step + 1 == args.warmup_steps + args.student_wait_steps:
+                if step + 1 == 10000:
                     state = {
                         'step': step + 1,
                         'teacher_state_dict': teacher_model.state_dict(),
@@ -339,7 +331,7 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
                     }
                     # os.makedirs(args.save_path, exist_ok=True)
                     name = args.name
-                    filename = f'{args.save_path}/{name}_lr.pth.tar'
+                    filename = f'{args.save_path}/{name}_{str(step+1)}_{str(int(top1))}.pth.tar'
                     torch.save(state, filename, _use_new_zipfile_serialization=False)
     # finetune
     del t_scaler, t_scheduler, t_optimizer, teacher_model, unlabeled_loader
@@ -352,7 +344,7 @@ def train_loop(args, labeled_loader, unlabeled_loader, test_loader,
         model_load_state_dict(student_model, checkpoint['avg_state_dict'])
     else:
         model_load_state_dict(student_model, checkpoint['student_state_dict'])
-    finetune(args, labeled_loader, test_loader, student_model, criterion)
+    finetune(args, labeled_loader, test_loader, student_model, criterion, loss_file, acc_file)
     return
 
 
@@ -513,8 +505,7 @@ def main():
         torch.distributed.barrier()
 
 
-    # 调用的函数为data_baseline.py里的get_10_balance(),这里的有标签数据为10%平衡数据，无标签数据为100%AffectNet,标签类别为7类
-    labeled_dataset, unlabeled_dataset, test_dataset = DATASET_GETTERS['bal_7'](args)
+    labeled_dataset, unlabeled_dataset, test_dataset = DATASET_GETTERS['get_data'](args)
 
     if args.local_rank == 0:
         torch.distributed.barrier()
@@ -546,25 +537,8 @@ def main():
                              pin_memory=True
                              )
 
-    if args.dataset == "cifar10":
-        depth, widen_factor = 28, 2
-    elif args.dataset == 'cifar100':
-        depth, widen_factor = 28, 8
-    else:
-        depth, widen_factor = 28, 8
     if args.local_rank not in [-1, 0]:
         torch.distributed.barrier()
-
-    #     teacher_model = WideResNet(num_classes=args.num_classes,
-    #                                depth=depth,
-    #                                widen_factor=widen_factor,
-    #                                dropout=0,
-    #                                dense_dropout=args.teacher_dropout)
-    #     student_model = WideResNet(num_classes=args.num_classes,
-    #                                depth=depth,
-    #                                widen_factor=widen_factor,
-    #                                dropout=0,
-    #                                dense_dropout=args.student_dropout)
 
     # if torch.cuda.device_count() > 1:
     #     print("We have ", torch.cuda.device_count(), " GPUs!")
