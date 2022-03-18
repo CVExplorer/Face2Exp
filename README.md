@@ -7,7 +7,8 @@ Facial expression recognition (FER) is challenging due to the class imbalance ca
 The training command for affectnet is:
 > python main.py --seed 5 --name aff --num-classes 7 --total-steps 180000 --eval-step 100 --randaug 2 16 --batch-size 8 --teacher_lr 1e-3 --student_lr 1e-3 --amp --resize 224 --world-size 2 --workers 16 
 
-
-Our model is stored in the [Google drive](https://drive.google.com/file/d/116e1WILkG4RKjwol5OyczaROYsKja9CP/view?usp=sharing). 
+## Details
+The selected labeled data is placed in the directory of data, as the format of csv.
+Our model is stored in the [Google drive](https://drive.google.com/file/d/1y81cKJLDWs7Dzp9k8lm3zNG78C5qGyqd/view?usp=sharing). 
 For test program, just run the test.ipynb file after modifying the model path to test the accuracy and predict a single image.
 
