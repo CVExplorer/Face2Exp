@@ -221,22 +221,4 @@ class RandAugment(object):
             img = op(img, v=self.m, max_v=max_v, bias=bias)
         return img
 
-class RandAugment_n(object):
-    def __init__(self, n, m, resample_mode=PIL.Image.BILINEAR):
-        assert n >= 1
-        assert m >= 1
-        global RESAMPLE_MODE
-        RESAMPLE_MODE = resample_mode
-        self.n = n
-        self.m = m
-        self.augment_pool = rand_augment_pool()
-
-    def __call__(self, img):
-        # ops = random.choices(self.augment_pool, k=self.n)
-        ops = []
-        ops.append(self.augment_pool[self.n])
-        for op, max_v, bias in ops:
-            img = op(img, v=self.m, max_v=max_v, bias=bias)
-        return img
-
 
