@@ -25,7 +25,6 @@ def create_loss_fn(args):
         criterion = nn.CrossEntropyLoss()
     return criterion.to(args.device)
 
-
 def module_load_state_dict(model, state_dict):
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
