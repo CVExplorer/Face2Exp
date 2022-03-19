@@ -12,3 +12,9 @@ The selected labeled data is placed in the directory of data, as the format of c
 Our model is stored in the [Google drive](https://drive.google.com/file/d/1y81cKJLDWs7Dzp9k8lm3zNG78C5qGyqd/view?usp=sharing). 
 For test program, just run the test.ipynb file after modifying the model path to test the accuracy and predict a single image.
 
+## Contact
+If you have any questions, please contact authors: 
+
+Dan Zeng: zengd@sustech.edu.cn
+
+Zhiyuan Lin: 12132456@mail.sustech.edu.cn
